@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: crownlist
+    runtime: node
+    plan: starter
+    region: ohio
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/data.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "10000"
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
