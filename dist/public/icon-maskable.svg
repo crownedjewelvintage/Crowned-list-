@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Full bleed background — required for maskable -->
+  <rect width="512" height="512" fill="#0a3a2a"/>
+  <rect width="512" height="256" fill="#0f4a37" fill-opacity="0.6"/>
+  <!-- Crown sits inside ~80% safe zone (centered) -->
+  <path
+    d="M128 240 L192 320 L228 216 L256 282 L284 216 L320 320 L384 240 L370 392 L142 392 Z"
+    fill="#d4a73a"
+    stroke="#8a6418"
+    stroke-width="7"
+    stroke-linejoin="round"
+  />
+  <rect x="142" y="374" width="228" height="38" rx="9" fill="#a8801f"/>
+  <circle cx="172" cy="393" r="6" fill="#fff8e0"/>
+  <circle cx="214" cy="393" r="6" fill="#fff8e0"/>
+  <circle cx="256" cy="393" r="6" fill="#fff8e0"/>
+  <circle cx="298" cy="393" r="6" fill="#fff8e0"/>
+  <circle cx="340" cy="393" r="6" fill="#fff8e0"/>
+  <circle cx="192" cy="324" r="13" fill="#0a3a2a" stroke="#072018" stroke-width="2.5"/>
+  <circle cx="256" cy="290" r="16" fill="#0a3a2a" stroke="#072018" stroke-width="2.5"/>
+  <circle cx="320" cy="324" r="13" fill="#0a3a2a" stroke="#072018" stroke-width="2.5"/>
+  <circle cx="250" cy="284" r="4" fill="#1f9268"/>
+</svg>
