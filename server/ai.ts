@@ -158,7 +158,7 @@ export async function generateListingFromImages(
   }
 
   const response = await getClient().responses.create({
-    model: "gpt_5_2",
+    model: process.env.OPENAI_MODEL || "gpt-4o",
     input: [{ type: "message", role: "user", content }] as any,
   });
 
