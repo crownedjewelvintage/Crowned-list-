@@ -14,6 +14,7 @@ import OrdersPage from "./pages/orders";
 import ReportsPage from "./pages/reports";
 import ShopOrdersPage from "./pages/shop-orders";
 import ShopCustomersPage from "./pages/shop-customers";
+import ShopSettingsPage from "./pages/shop-settings";
 import NotFound from "@/pages/not-found";
 
 function AppRouter() {
@@ -28,6 +29,7 @@ function AppRouter() {
       <Route path="/reports" component={ReportsPage} />
       <Route path="/shop-orders" component={ShopOrdersPage} />
       <Route path="/shop-customers" component={ShopCustomersPage} />
+      <Route path="/shop-settings" component={ShopSettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

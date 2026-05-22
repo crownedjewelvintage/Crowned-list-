@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import { LogOut, Sun, Moon, Package, Calendar, ListOrdered, BarChart3, ShoppingBag, Users } from "lucide-react";
+import { LogOut, Sun, Moon, Package, Calendar, ListOrdered, BarChart3, ShoppingBag, Users, Settings } from "lucide-react";
 
 export function CrownLogo({ size = 32 }: { size?: number }) {
   return (
@@ -45,6 +45,7 @@ export function AppHeader() {
   const isReports = location.startsWith("/reports");
   const isShopOrders = location.startsWith("/shop-orders");
   const isShopCustomers = location.startsWith("/shop-customers");
+  const isShopSettings = location.startsWith("/shop-settings");
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-30">
@@ -127,6 +128,17 @@ export function AppHeader() {
               >
                 <Users className="size-4" />
                 <span className="hidden md:inline">Shop Customers</span>
+              </Button>
+            </Link>
+            <Link href="/shop-settings">
+              <Button
+                data-testid="nav-shop-settings"
+                variant={isShopSettings ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-1.5"
+              >
+                <Settings className="size-4" />
+                <span className="hidden md:inline">Settings</span>
               </Button>
             </Link>
           </nav>
