@@ -1250,6 +1250,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       flatShippingRate: s.flatShippingRate,
       stripePublishableKey: s.stripePublishableKey,
       stripeEnabled: !!(s.stripePublishableKey && s.stripeSecretKey),
+      shopName: s.shopName,
+      heroEyebrow: s.heroEyebrow,
+      heroTitle: s.heroTitle,
+      heroTitleItalic: s.heroTitleItalic,
+      heroSubtitle: s.heroSubtitle,
+      announcementBar: s.announcementBar,
+      aboutText: s.aboutText,
+      contactEmail: s.contactEmail,
+      instagramUrl: s.instagramUrl,
+      whatnotUrl: s.whatnotUrl,
+      taxRate: s.taxRate,
     });
   });
 

@@ -246,6 +246,27 @@ function ensureOrderColumn(name: string, def: string) {
 }
 ensureOrderColumn("bundle_number", "TEXT NOT NULL DEFAULT ''");
 
+// ----- Migrations for shop_settings: add storefront content columns -----
+function ensureShopSettingsColumn(name: string, def: string) {
+  const cols = sqlite
+    .prepare("PRAGMA table_info(shop_settings)")
+    .all() as { name: string }[];
+  if (!cols.some((c) => c.name === name)) {
+    sqlite.exec(`ALTER TABLE shop_settings ADD COLUMN ${name} ${def}`);
+  }
+}
+ensureShopSettingsColumn("shop_name", "TEXT NOT NULL DEFAULT 'Crowned Jewel Vintage'");
+ensureShopSettingsColumn("hero_eyebrow", "TEXT NOT NULL DEFAULT 'ESTATE-FRESH \u00b7 ONE-OF-ONE'");
+ensureShopSettingsColumn("hero_title", "TEXT NOT NULL DEFAULT 'Heirloom-quality vintage,'");
+ensureShopSettingsColumn("hero_title_italic", "TEXT NOT NULL DEFAULT 'carefully curated.'");
+ensureShopSettingsColumn("hero_subtitle", "TEXT NOT NULL DEFAULT 'Crystal, fine china, jewelry and home accents \u2014 sourced from estates and presented with the reverence each piece deserves. Every find is one-of-one.'");
+ensureShopSettingsColumn("announcement_bar", "TEXT NOT NULL DEFAULT ''");
+ensureShopSettingsColumn("about_text", "TEXT NOT NULL DEFAULT ''");
+ensureShopSettingsColumn("contact_email", "TEXT NOT NULL DEFAULT ''");
+ensureShopSettingsColumn("instagram_url", "TEXT NOT NULL DEFAULT ''");
+ensureShopSettingsColumn("whatnot_url", "TEXT NOT NULL DEFAULT ''");
+ensureShopSettingsColumn("tax_rate", "REAL NOT NULL DEFAULT 0");
+
 export const db = drizzle(sqlite);
 
 export interface IStorage {

@@ -289,6 +289,18 @@ export const shopSettings = sqliteTable("shop_settings", {
   stripeSecretKey: text("stripe_secret_key").notNull().default(""),
   freeShippingThreshold: real("free_shipping_threshold").notNull().default(100),
   flatShippingRate: real("flat_shipping_rate").notNull().default(9),
+  // Storefront content (editable hero & announcement on shop homepage)
+  shopName: text("shop_name").notNull().default("Crowned Jewel Vintage"),
+  heroEyebrow: text("hero_eyebrow").notNull().default("ESTATE-FRESH \u00b7 ONE-OF-ONE"),
+  heroTitle: text("hero_title").notNull().default("Heirloom-quality vintage,"),
+  heroTitleItalic: text("hero_title_italic").notNull().default("carefully curated."),
+  heroSubtitle: text("hero_subtitle").notNull().default("Crystal, fine china, jewelry and home accents \u2014 sourced from estates and presented with the reverence each piece deserves. Every find is one-of-one."),
+  announcementBar: text("announcement_bar").notNull().default(""),
+  aboutText: text("about_text").notNull().default(""),
+  contactEmail: text("contact_email").notNull().default(""),
+  instagramUrl: text("instagram_url").notNull().default(""),
+  whatnotUrl: text("whatnot_url").notNull().default(""),
+  taxRate: real("tax_rate").notNull().default(0),
   updatedAt: integer("updated_at").notNull().default(0),
 });
 export const insertShopSettingsSchema = createInsertSchema(shopSettings).omit({

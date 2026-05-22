@@ -5,7 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Item, InsertItem, Show } from "@shared/schema";
 import { AppHeader } from "@/components/AppHeader";
 import { parseImages, uploadPhotos, downloadCsv, profit, marginPct, resolvePhotoUrl } from "@/lib/items";
-import { printBarcodeLabels } from "@/lib/barcode";
+import { printBarcodeLabels, LABEL_FORMATS, saveLabelFormatPref, type LabelFormatId } from "@/lib/barcode";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Barcode } from "@/components/Barcode";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { Button } from "@/components/ui/button";
@@ -414,18 +415,37 @@ export default function InventoryPage() {
                 <Download className="size-4 mr-1.5" />
                 Export selected
               </Button>
-              <Button
-                data-testid="button-bulk-print-barcodes"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const selectedItems = items.filter((it) => selected.has(it.id));
-                  printBarcodeLabels(selectedItems);
-                }}
-              >
-                <Printer className="size-4 mr-1.5" />
-                Print barcodes
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    data-testid="button-bulk-print-barcodes"
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Printer className="size-4 mr-1.5" />
+                    Print barcodes
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuLabel>Choose label format</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {Object.values(LABEL_FORMATS).map((fmt) => (
+                    <DropdownMenuItem
+                      key={fmt.id}
+                      data-testid={`print-format-${fmt.id}`}
+                      onClick={() => {
+                        saveLabelFormatPref(fmt.id as LabelFormatId);
+                        const selectedItems = items.filter((it) => selected.has(it.id));
+                        printBarcodeLabels(selectedItems, fmt.id as LabelFormatId);
+                      }}
+                      className="flex flex-col items-start gap-0.5 py-2"
+                    >
+                      <div className="font-medium text-sm">{fmt.name}</div>
+                      <div className="text-xs text-muted-foreground">{fmt.description}</div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 data-testid="button-bulk-delete"
                 size="sm"

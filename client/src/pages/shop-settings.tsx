@@ -5,9 +5,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Eye, EyeOff, ExternalLink, Truck, CreditCard, Gift } from "lucide-react";
+import { Save, Eye, EyeOff, ExternalLink, Truck, CreditCard, Gift, Store, Megaphone, AtSign } from "lucide-react";
 
 type ShopSettings = {
   pointsPerDollar: number;
@@ -21,6 +22,17 @@ type ShopSettings = {
   stripeSecretKey: string;
   freeShippingThreshold: number;
   flatShippingRate: number;
+  shopName: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroTitleItalic: string;
+  heroSubtitle: string;
+  announcementBar: string;
+  aboutText: string;
+  contactEmail: string;
+  instagramUrl: string;
+  whatnotUrl: string;
+  taxRate: number;
 };
 
 export default function ShopSettingsPage() {
@@ -80,6 +92,141 @@ export default function ShopSettingsPage() {
             Configure payments, shipping, and loyalty rewards for crownedjewelvintage.com
           </p>
         </div>
+
+        {/* Storefront Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Store className="size-5" />
+              Storefront Content
+            </CardTitle>
+            <CardDescription>
+              These appear on crownedjewelvintage.com. Changes go live within a minute of saving.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="shopName">Shop Name</Label>
+              <Input
+                id="shopName"
+                data-testid="input-shop-name"
+                value={form.shopName}
+                onChange={(e) => update("shopName", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Appears in the header and browser tab.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="heroEyebrow">Hero Eyebrow (small uppercase text above the headline)</Label>
+              <Input
+                id="heroEyebrow"
+                data-testid="input-hero-eyebrow"
+                value={form.heroEyebrow}
+                onChange={(e) => update("heroEyebrow", e.target.value)}
+                placeholder="ESTATE-FRESH \u00b7 ONE-OF-ONE"
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="heroTitle">Hero Title (regular)</Label>
+                <Input
+                  id="heroTitle"
+                  data-testid="input-hero-title"
+                  value={form.heroTitle}
+                  onChange={(e) => update("heroTitle", e.target.value)}
+                  placeholder="Heirloom-quality vintage,"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="heroTitleItalic">Hero Title (italic accent)</Label>
+                <Input
+                  id="heroTitleItalic"
+                  data-testid="input-hero-title-italic"
+                  value={form.heroTitleItalic}
+                  onChange={(e) => update("heroTitleItalic", e.target.value)}
+                  placeholder="carefully curated."
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="heroSubtitle">Hero Subtitle</Label>
+              <Textarea
+                id="heroSubtitle"
+                data-testid="input-hero-subtitle"
+                rows={3}
+                value={form.heroSubtitle}
+                onChange={(e) => update("heroSubtitle", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="announcementBar" className="flex items-center gap-2">
+                <Megaphone className="size-4" /> Announcement Bar (optional)
+              </Label>
+              <Input
+                id="announcementBar"
+                data-testid="input-announcement-bar"
+                value={form.announcementBar}
+                onChange={(e) => update("announcementBar", e.target.value)}
+                placeholder="Free shipping on orders over $100"
+              />
+              <p className="text-xs text-muted-foreground">Shows as a strip across the top of every shop page. Leave blank to hide.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="aboutText">About Page Text</Label>
+              <Textarea
+                id="aboutText"
+                data-testid="input-about-text"
+                rows={6}
+                value={form.aboutText}
+                onChange={(e) => update("aboutText", e.target.value)}
+                placeholder="Tell your customers about your shop, sourcing process, and what makes your pieces special..."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact & Social */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AtSign className="size-5" />
+              Contact & Social Links
+            </CardTitle>
+            <CardDescription>Customer support email and social media links.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="contactEmail">Customer Support Email</Label>
+              <Input
+                id="contactEmail"
+                data-testid="input-contact-email"
+                type="email"
+                value={form.contactEmail}
+                onChange={(e) => update("contactEmail", e.target.value)}
+                placeholder="hello@crownedjewelvintage.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="instagramUrl">Instagram URL</Label>
+              <Input
+                id="instagramUrl"
+                data-testid="input-instagram"
+                value={form.instagramUrl}
+                onChange={(e) => update("instagramUrl", e.target.value)}
+                placeholder="https://instagram.com/crownedjewelvintage"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatnotUrl">Whatnot URL</Label>
+              <Input
+                id="whatnotUrl"
+                data-testid="input-whatnot"
+                value={form.whatnotUrl}
+                onChange={(e) => update("whatnotUrl", e.target.value)}
+                placeholder="https://whatnot.com/user/crownedjewel"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stripe Payments */}
         <Card>
@@ -181,6 +328,20 @@ export default function ShopSettingsPage() {
                 onChange={(e) => update("freeShippingThreshold", parseFloat(e.target.value) || 0)}
               />
               <p className="text-xs text-muted-foreground">Orders ≥ this subtotal ship free.</p>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="taxRate">Sales Tax Rate (%)</Label>
+              <Input
+                id="taxRate"
+                data-testid="input-tax-rate"
+                type="number"
+                min="0"
+                max="15"
+                step="0.01"
+                value={form.taxRate}
+                onChange={(e) => update("taxRate", parseFloat(e.target.value) || 0)}
+              />
+              <p className="text-xs text-muted-foreground">Texas state tax is 6.25%; with Dallas local tax it&apos;s usually 8.25%. Leave 0 to not charge tax.</p>
             </div>
           </CardContent>
         </Card>
