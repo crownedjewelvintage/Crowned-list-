@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -61,6 +62,8 @@ import {
   CalendarPlus,
   Printer,
   ScanLine,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const STATUSES = ["Active", "Sold", "Inactive"] as const;
@@ -681,6 +684,7 @@ function ItemsTable({
               <th className="text-left font-medium px-4 py-3 hidden lg:table-cell">Profit</th>
               <th className="text-left font-medium px-4 py-3 hidden md:table-cell">Qty</th>
               <th className="text-left font-medium px-4 py-3">Status</th>
+              <th className="text-left font-medium px-4 py-3 hidden md:table-cell">Shop</th>
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
@@ -699,6 +703,45 @@ function ItemsTable({
         </table>
       </div>
     </Card>
+  );
+}
+
+function WebVisibleToggle({ item }: { item: Item }) {
+  const { toast } = useToast();
+  const visible = item.webVisible === 1;
+  const mut = useMutation({
+    mutationFn: async (next: boolean) => {
+      const res = await apiRequest("PATCH", `/api/items/${item.id}/web`, {
+        webVisible: next ? 1 : 0,
+      });
+      return res.json();
+    },
+    onSuccess: (_data, next) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/items"] });
+      toast({
+        title: next ? "Visible on shop" : "Hidden from shop",
+        description: item.title || `Item #${item.id}`,
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+  return (
+    <div className="flex items-center gap-2">
+      <Switch
+        data-testid={`switch-web-visible-${item.id}`}
+        checked={visible}
+        disabled={mut.isPending}
+        onCheckedChange={(v) => mut.mutate(v)}
+        aria-label="Toggle shop visibility"
+      />
+      {visible ? (
+        <Eye className="size-3.5 text-emerald-700 dark:text-emerald-400" />
+      ) : (
+        <EyeOff className="size-3.5 text-muted-foreground" />
+      )}
+    </div>
   );
 }
 
@@ -769,6 +812,9 @@ function ItemRow({
       <td className="px-4 py-3 hidden md:table-cell">{item.quantity}</td>
       <td className="px-4 py-3">
         <StatusBadge status={item.status} />
+      </td>
+      <td className="px-4 py-3 hidden md:table-cell">
+        <WebVisibleToggle item={item} />
       </td>
       <td className="px-4 py-3 text-right">
         <div className="inline-flex gap-1">

@@ -51,7 +51,7 @@ export const items = sqliteTable("items", {
   // Photos: JSON array of URLs (data: URLs OR public http(s) URLs from /uploads/)
   imagesJson: text("images_json").notNull().default("[]"),
   // Crowned Jewel Vintage shop fields
-  webVisible: integer("web_visible").notNull().default(0),
+  webVisible: integer("web_visible").notNull().default(1),
   webPrice: real("web_price").notNull().default(0),
   webDescription: text("web_description").notNull().default(""),
   createdAt: integer("created_at").notNull().default(0),

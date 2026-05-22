@@ -267,6 +267,27 @@ ensureShopSettingsColumn("instagram_url", "TEXT NOT NULL DEFAULT ''");
 ensureShopSettingsColumn("whatnot_url", "TEXT NOT NULL DEFAULT ''");
 ensureShopSettingsColumn("tax_rate", "REAL NOT NULL DEFAULT 0");
 
+// One-time backfill: auto-publish all existing Active items with quantity > 0 to the shop.
+// Tracked via a settings row so it only runs once.
+try {
+  sqlite.exec(
+    "CREATE TABLE IF NOT EXISTS app_migrations (key TEXT PRIMARY KEY, ran_at INTEGER NOT NULL)",
+  );
+  const already = sqlite
+    .prepare("SELECT key FROM app_migrations WHERE key = ?")
+    .get("backfill_web_visible_v1") as { key: string } | undefined;
+  if (!already) {
+    sqlite.exec(
+      "UPDATE items SET web_visible = 1 WHERE status = 'Active' AND quantity > 0",
+    );
+    sqlite
+      .prepare("INSERT INTO app_migrations (key, ran_at) VALUES (?, ?)")
+      .run("backfill_web_visible_v1", Date.now());
+  }
+} catch (err) {
+  console.warn("backfill_web_visible_v1 migration failed (non-fatal):", err);
+}
+
 export const db = drizzle(sqlite);
 
 export interface IStorage {
