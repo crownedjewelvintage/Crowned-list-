@@ -1450,6 +1450,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     };
   }
 
+  const shippingAddressSchema = z
+    .union([
+      z.string(),
+      z.object({
+        firstName: z.string().optional().default(""),
+        lastName: z.string().optional().default(""),
+        addressLine1: z.string().optional().default(""),
+        addressLine2: z.string().optional().default(""),
+        city: z.string().optional().default(""),
+        state: z.string().optional().default(""),
+        postalCode: z.string().optional().default(""),
+        country: z.string().optional().default("US"),
+        phone: z.string().optional().default(""),
+      }),
+    ])
+    .default("")
+    .transform((v) => (typeof v === "string" ? v : JSON.stringify(v)));
+
   app.post(
     "/api/shop/checkout/create-intent",
     customerAuthMiddleware,
@@ -1458,7 +1476,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const schema = z.object({
           items: z.array(z.object({ itemId: z.number(), qty: z.number().min(1) })).min(1),
           pointsToRedeem: z.number().min(0).default(0),
-          shippingAddress: z.string().default(""),
+          shippingAddress: shippingAddressSchema,
         });
         const data = schema.parse(req.body);
         const customer = await storage.getCustomer(req.customerId!);
@@ -1513,7 +1531,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           paymentIntentId: z.string().min(1),
           items: z.array(z.object({ itemId: z.number(), qty: z.number().min(1) })).min(1),
           pointsToRedeem: z.number().min(0).default(0),
-          shippingAddress: z.string().default(""),
+          shippingAddress: shippingAddressSchema,
         });
         const data = schema.parse(req.body);
         const customer = await storage.getCustomer(req.customerId!);
