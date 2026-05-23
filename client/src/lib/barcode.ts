@@ -54,7 +54,27 @@ export function barcodeSvgString(
   } catch {
     return "";
   }
+  // Remove fixed width/height so the SVG can scale via CSS while preserving
+  // aspect ratio. Without this, jsbarcode stamps absolute pixel dimensions
+  // that fight the label's print sizing and the barcode ends up huge.
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   return new XMLSerializer().serializeToString(svg);
+}
+
+// Compute a bar-pixel width that makes the encoded barcode fit a given
+// physical label width (in inches), accounting for SKU length.
+// Code128 encoding: ~11 modules per character + start/stop/checksum overhead.
+function computeBarPx(value: string, availableWidthIn: number): number {
+  const len = Math.max(1, value.length);
+  // ~11 modules per char + 35 modules of overhead (start + checksum + stop + quiet zones).
+  const modules = len * 11 + 35;
+  const targetPx = availableWidthIn * 96; // 96px = 1in in JsBarcode's SVG coordinate space
+  const px = targetPx / modules;
+  // Clamp so very short SKUs don't get ridiculous fat bars, and very long
+  // SKUs don't fall under the 1px minimum a thermal printer can resolve cleanly.
+  return Math.max(0.7, Math.min(2.2, px));
 }
 
 // ---------- Label format definitions ----------
@@ -64,7 +84,8 @@ export type LabelFormatId =
   | "dymo30252"
   | "dymo30334"
   | "dymo30336"
-  | "dymo30256";
+  | "dymo30256"
+  | "dymoJewelry";
 
 export type LabelFormat = {
   id: LabelFormatId;
@@ -98,6 +119,8 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     sheetMarginLeft: 0.1875,
     sheetColGap: 0.125,
   },
+  // Note: the bar-width passed to sheet labels is also computed below.
+  // We keep a sensible default for callers that pass an explicit width.
   dymo30252: {
     id: "dymo30252",
     name: "Dymo 30252 Address (1.125\" \u00d7 3.5\")",
@@ -128,6 +151,14 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     description: "Large shipping label \u2014 great for packing slip-style labels.",
     widthIn: 4,
     heightIn: 2.3125,
+    layout: "single",
+  },
+  dymoJewelry: {
+    id: "dymoJewelry",
+    name: "Dymo Jewelry / Barbell 2-up (0.5\" \u00d7 2\")",
+    description: "Small 2-up Dymo label with perforation (a jewelry tag). Prints barcode + SKU sized to fit.",
+    widthIn: 2,
+    heightIn: 0.5,
     layout: "single",
   },
 };
@@ -167,7 +198,14 @@ function buildSheetHtml(
   fmt: LabelFormat,
 ): string {
   const labelHtml = items
-    .map((item) => labelInner(item, { fontTitle: 8.5, fontSku: 8, barcodeHeightIn: 0.4, barcodeWidth: 1.4 }))
+    .map((item) =>
+      labelInner(item, {
+        fontTitle: 8.5,
+        fontSku: 8,
+        barcodeHeightIn: 0.4,
+        barcodeAvailableWidthIn: fmt.widthIn - 0.24,
+      }),
+    )
     .join("");
 
   const cols = fmt.sheetCols ?? 3;
@@ -211,12 +249,25 @@ function buildSingleHtml(
   items: Pick<Item, "sku" | "title" | "webPrice">[],
   fmt: LabelFormat,
 ): string {
-  // Tune font/barcode size based on label dimensions
-  const small = fmt.widthIn < 2.3 || fmt.heightIn < 1.1;
-  const fontTitle = small ? 7.5 : 9;
-  const fontSku = small ? 7 : 8;
-  const barcodeHeightIn = Math.min(0.5, fmt.heightIn * 0.45);
-  const barcodeWidth = small ? 1.1 : 1.5;
+  // Padding reserved around the label (matches CSS below).
+  const padX = 0.08;
+  const padY = 0.05;
+  // Usable interior width/height in inches.
+  const innerW = Math.max(0.4, fmt.widthIn - padX * 2);
+  const innerH = Math.max(0.3, fmt.heightIn - padY * 2);
+
+  // Decide whether this label is too short to fit a title row.
+  const tiny = innerH < 0.7; // jewelry-style and similar
+  const small = !tiny && (fmt.widthIn < 2.3 || fmt.heightIn < 1.1);
+
+  // Allocate vertical space: title (if shown) + barcode + sku row.
+  // Reserve ~14pt (0.20in) for sku, ~14pt (0.20in) for title.
+  const skuRowIn = 0.18;
+  const titleRowIn = tiny ? 0 : small ? 0.16 : 0.22;
+  const barcodeHeightIn = Math.max(0.18, innerH - skuRowIn - titleRowIn - 0.04);
+
+  const fontTitle = tiny ? 0 : small ? 7 : 9;
+  const fontSku = tiny ? 6.5 : small ? 7 : 8;
 
   const labelHtml = items
     .map((item) =>
@@ -224,8 +275,9 @@ function buildSingleHtml(
         fontTitle,
         fontSku,
         barcodeHeightIn,
-        barcodeWidth,
-        showPrice: !small,
+        barcodeAvailableWidthIn: innerW,
+        showPrice: !small && !tiny,
+        hideTitle: tiny,
       })}</div></div>`,
     )
     .join("");
@@ -246,7 +298,7 @@ function buildSingleHtml(
     }
     .label {
       width: 100%; height: 100%;
-      padding: 0.06in 0.1in; overflow: hidden;
+      padding: ${padY}in ${padX}in; overflow: hidden;
       display: flex; flex-direction: column; justify-content: center;
       align-items: center; text-align: center;
       border: 1px dashed #ddd;
@@ -265,21 +317,39 @@ function buildSingleHtml(
 
 function labelInner(
   item: Pick<Item, "sku" | "title" | "webPrice">,
-  opts: { fontTitle: number; fontSku: number; barcodeHeightIn: number; barcodeWidth: number; showPrice?: boolean },
+  opts: {
+    fontTitle: number;
+    fontSku: number;
+    barcodeHeightIn: number;
+    // Either an explicit jsbarcode bar-width (sheet layouts pass this)...
+    barcodeWidth?: number;
+    // ...or the available physical width to auto-size the barcode to (single layouts).
+    barcodeAvailableWidthIn?: number;
+    showPrice?: boolean;
+    hideTitle?: boolean;
+  },
 ): string {
   const sku = (item.sku || "").trim();
   const title = (item.title || "").trim();
   const price = item.webPrice && item.webPrice > 0 ? `$${Number(item.webPrice).toFixed(2)}` : "";
+  const barWidth =
+    opts.barcodeWidth !== undefined
+      ? opts.barcodeWidth
+      : computeBarPx(sku, (opts.barcodeAvailableWidthIn ?? 2) * 0.92);
   const svg = barcodeSvgString(sku, {
-    height: opts.barcodeHeightIn * 72, // pt
-    width: opts.barcodeWidth,
+    height: Math.max(20, opts.barcodeHeightIn * 96), // SVG coordinate space (96/in)
+    width: barWidth,
   });
   const safeTitle = escapeHtml(title);
   const safeSku = escapeHtml(sku);
   const safePrice = escapeHtml(price);
 
+  const titleHtml = opts.hideTitle
+    ? ""
+    : `<div class="label-title" style="font-size:${opts.fontTitle}pt;" title="${safeTitle}">${safeTitle || "&nbsp;"}</div>`;
+
   return `
-    <div class="label-title" style="font-size:${opts.fontTitle}pt;" title="${safeTitle}">${safeTitle || "&nbsp;"}</div>
+    ${titleHtml}
     <div class="label-barcode" style="height:${opts.barcodeHeightIn}in;">${svg || `<div class='label-empty'>${safeSku || "(no SKU)"}</div>`}</div>
     <div class="label-sku" style="font-size:${opts.fontSku}pt;">${safeSku || ""}${opts.showPrice && safePrice ? `  \u00b7  <strong>${safePrice}</strong>` : ""}</div>
   `;
@@ -312,7 +382,7 @@ function baseDoc(body: string, extraCss: string): string {
     width: 100%;
   }
   .label-barcode { margin: 2px 0; line-height: 0; display: flex; align-items: center; justify-content: center; width: 100%; }
-  .label-barcode svg { max-width: 95%; height: 100%; display: block; }
+  .label-barcode svg { max-width: 100%; max-height: 100%; width: 100%; height: 100%; display: block; }
   .label-empty { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9pt; }
   .label-sku { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.3px; }
   ${extraCss}
