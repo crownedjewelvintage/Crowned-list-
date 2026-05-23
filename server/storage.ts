@@ -833,6 +833,14 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(items.id, id), eq(items.webVisible, 1)))
       .get();
   }
+  async getWebProductsByIds(ids: number[]): Promise<Item[]> {
+    if (ids.length === 0) return [];
+    return db
+      .select()
+      .from(items)
+      .where(and(inArray(items.id, ids), eq(items.webVisible, 1)))
+      .all();
+  }
 }
 
 export const storage = new DatabaseStorage();

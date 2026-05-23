@@ -1395,7 +1395,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   ) {
     const settings = await storage.getShopSettings(operatorUserId());
     const itemIds = cartItems.map((c) => c.itemId);
-    const products = await storage.getItemsByIds(itemIds, operatorUserId());
+    // Operator-wide visibility check (matches public shop listing) — not userId-scoped
+    const products = await storage.getWebProductsByIds(itemIds);
     const productMap = new Map(products.map((p) => [p.id, p]));
     const lineItems: any[] = [];
     let subtotal = 0;
