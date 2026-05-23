@@ -88,6 +88,7 @@ export type LabelFormatId =
   | "dymoJewelry"
   | "dymo4xl_1x2"
   | "dymo4xl_1x2_portrait"
+  | "dymo30253"
   | "dymo30387"
   | "dymo30857"
   | "dymo1744907";
@@ -97,21 +98,23 @@ export type LabelFormat = {
   name: string;
   description: string;
   // Dimensions in inches. For sheet formats, this is the single-label size.
+  // For "multi" (multi-up Dymo) this is the physical page size that the
+  // printer feeds (containing nUp sub-labels).
   widthIn: number;
   heightIn: number;
-  // Layout type: "sheet" lays out a grid on Letter paper; "single" prints
-  // one label per page sized exactly to the label (for Dymo continuous feed).
-  layout: "sheet" | "single";
-  // Rotate the printed content 90 degrees inside the page. Some Dymo drivers
-  // feed labels in a fixed orientation (portrait), so we have to rotate the
-  // content rather than swapping page dimensions.
+  layout: "sheet" | "single" | "multi";
   rotateContent?: 0 | 90 | 180 | 270;
-  // For sheet layouts:
+  // For sheet layouts (Letter paper, many labels per page):
   sheetCols?: number;
   sheetRows?: number;
   sheetMarginTop?: number;
   sheetMarginLeft?: number;
   sheetColGap?: number;
+  // For multi-up Dymo labels (one page feed = N small labels divided by perfs):
+  nUp?: number;          // how many sub-labels per fed page
+  nUpDir?: "horizontal" | "vertical"; // are the sub-labels side-by-side or stacked
+  subWidthIn?: number;   // each sub-label width
+  subHeightIn?: number;  // each sub-label height
 };
 
 export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
@@ -187,6 +190,18 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     layout: "single",
     rotateContent: 90,
   },
+  dymo30253: {
+    id: "dymo30253",
+    name: "Dymo 30253 Address 2-up (3.5\" \u00d7 1.125\" each)",
+    description: "Standard 2-up address label \u2014 prints two product labels per feed. Match your 4XL paper to '30253 Address'.",
+    widthIn: 3.5,
+    heightIn: 2.3125,
+    layout: "multi",
+    nUp: 2,
+    nUpDir: "vertical",
+    subWidthIn: 3.5,
+    subHeightIn: 1.125,
+  },
   // ----- LabelWriter 4XL labels (the wide-format Dymo) -----
   dymo30387: {
     id: "dymo30387",
@@ -238,8 +253,103 @@ export function printBarcodeLabels(
   if (items.length === 0) return;
   const fmt = LABEL_FORMATS[formatId] || LABEL_FORMATS.avery5160;
 
-  const html = fmt.layout === "sheet" ? buildSheetHtml(items, fmt) : buildSingleHtml(items, fmt);
+  let html: string;
+  if (fmt.layout === "sheet") {
+    html = buildSheetHtml(items, fmt);
+  } else if (fmt.layout === "multi") {
+    html = buildMultiHtml(items, fmt);
+  } else {
+    html = buildSingleHtml(items, fmt);
+  }
   openPrintHtml(html);
+}
+
+// ----- Multi-up Dymo layout (one fed page contains N sub-labels) -----
+
+function buildMultiHtml(
+  items: Pick<Item, "sku" | "title" | "webPrice">[],
+  fmt: LabelFormat,
+): string {
+  const nUp = Math.max(1, fmt.nUp ?? 1);
+  const dir = fmt.nUpDir ?? "vertical";
+  const subW = fmt.subWidthIn ?? fmt.widthIn / (dir === "horizontal" ? nUp : 1);
+  const subH = fmt.subHeightIn ?? fmt.heightIn / (dir === "vertical" ? nUp : 1);
+
+  // Group items into pages of nUp.
+  const pages: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += nUp) {
+    pages.push(items.slice(i, i + nUp));
+  }
+
+  // Per-sub-label sizing.
+  const padX = 0.08;
+  const padY = 0.05;
+  const innerW = Math.max(0.4, subW - padX * 2);
+  const innerH = Math.max(0.3, subH - padY * 2);
+  const tiny = innerH < 0.7;
+  const small = !tiny && (subW < 2.3 || subH < 1.1);
+  const skuRowIn = 0.18;
+  const titleRowIn = tiny ? 0 : small ? 0.16 : 0.22;
+  const barcodeHeightIn = Math.max(0.18, innerH - skuRowIn - titleRowIn - 0.04);
+  const fontTitle = tiny ? 0 : small ? 7 : 9;
+  const fontSku = tiny ? 6.5 : small ? 7 : 8;
+
+  const renderSubLabel = (item: Pick<Item, "sku" | "title" | "webPrice"> | undefined) => {
+    if (!item) {
+      return `<div class="sublabel sublabel-empty"></div>`;
+    }
+    return `<div class="sublabel">${labelInner(item, {
+      fontTitle,
+      fontSku,
+      barcodeHeightIn,
+      barcodeAvailableWidthIn: innerW,
+      showPrice: !small && !tiny,
+      hideTitle: tiny,
+    })}</div>`;
+  };
+
+  const pageHtml = pages
+    .map((pageItems) => {
+      // Always render exactly nUp sub-labels per page; pad with empty cells.
+      const cells = [];
+      for (let i = 0; i < nUp; i++) cells.push(renderSubLabel(pageItems[i]));
+      return `<div class="page">${cells.join("")}</div>`;
+    })
+    .join("");
+
+  const pageFlexDir = dir === "horizontal" ? "row" : "column";
+
+  return baseDoc(
+    `<div class="toolbar">
+      <button onclick="window.print()">Print</button>
+      <span class="meta">${items.length} label${items.length === 1 ? "" : "s"} (${pages.length} feed${pages.length === 1 ? "" : "s"}) \u2014 ${fmt.name}</span>
+      <span class="hint">In the print dialog: choose your Dymo printer, paper size \"30253 Address\", scale 100%, no headers/footers.</span>
+    </div>
+    ${pageHtml}`,
+    `
+    .page {
+      width: ${fmt.widthIn}in; height: ${fmt.heightIn}in;
+      background: #fff; margin: 8px auto;
+      page-break-after: always;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex; flex-direction: ${pageFlexDir};
+    }
+    .sublabel {
+      width: ${subW}in; height: ${subH}in;
+      padding: ${padY}in ${padX}in; overflow: hidden;
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: center; text-align: center;
+      border: 1px dashed #ddd;
+    }
+    .sublabel-empty { border-style: dotted; opacity: 0.4; }
+    @media print {
+      .toolbar { display: none; }
+      .page { margin: 0; box-shadow: none; }
+      .sublabel, .sublabel-empty { border: 0; }
+      @page { size: ${fmt.widthIn}in ${fmt.heightIn}in; margin: 0; }
+    }
+    `,
+  );
 }
 
 // ----- Sheet layout (Avery 5160) -----
