@@ -30,6 +30,24 @@ services:
         value: crownlist-backups
       - key: RETENTION_DAYS
         value: "30"
+      - key: SHIPPO_API_TOKEN
+        sync: false
+      - key: SHIPPING_FROM_NAME
+        sync: false
+      - key: SHIPPING_FROM_STREET1
+        sync: false
+      - key: SHIPPING_FROM_STREET2
+        sync: false
+      - key: SHIPPING_FROM_CITY
+        sync: false
+      - key: SHIPPING_FROM_STATE
+        sync: false
+      - key: SHIPPING_FROM_ZIP
+        sync: false
+      - key: SHIPPING_FROM_PHONE
+        sync: false
+      - key: SHIPPING_FROM_EMAIL
+        sync: false
     disk:
       name: data
       mountPath: /var/data

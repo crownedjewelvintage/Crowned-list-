@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ShoppingBag } from "lucide-react";
+import { Loader2, ShoppingBag, Truck, FileText } from "lucide-react";
+import { ShippingLabelDialog } from "@/components/ShippingLabelDialog";
 
 type ShopOrder = {
   id: number;
@@ -31,6 +32,9 @@ type ShopOrder = {
   fulfillmentStatus: string;
   trackingNumber: string;
   shippingAddress: string;
+  labelUrl?: string;
+  carrier?: string;
+  serviceLevel?: string;
   createdAt: number;
 };
 
@@ -52,6 +56,7 @@ function StatusBadge({ s }: { s: string }) {
 export default function ShopOrdersPage() {
   const { toast } = useToast();
   const [trackingDrafts, setTrackingDrafts] = useState<Record<number, string>>({});
+  const [labelDialogOrderId, setLabelDialogOrderId] = useState<number | null>(null);
   const { data: orders = [], isLoading } = useQuery<ShopOrder[]>({
     queryKey: ["/api/shop/admin/orders"],
   });
@@ -169,15 +174,73 @@ export default function ShopOrdersPage() {
                   </div>
                   {o.shippingAddress && (
                     <div className="mt-2 text-xs text-muted-foreground whitespace-pre-line">
-                      {o.shippingAddress}
+                      {(() => {
+                        try {
+                          const a = JSON.parse(o.shippingAddress);
+                          if (a && typeof a === "object") {
+                            const lines = [
+                              a.name,
+                              a.street1 || a.line1,
+                              a.street2 || a.line2,
+                              [a.city, a.state, a.zip].filter(Boolean).join(", "),
+                              a.country !== "US" ? a.country : null,
+                            ].filter(Boolean);
+                            return lines.join("\n");
+                          }
+                        } catch {}
+                        return o.shippingAddress;
+                      })()}
                     </div>
                   )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {o.labelUrl ? (
+                      <>
+                        <a
+                          href={o.labelUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex"
+                        >
+                          <Button size="sm" variant="outline">
+                            <FileText className="size-4 mr-1.5" />
+                            View label
+                          </Button>
+                        </a>
+                        <span className="text-xs text-muted-foreground">
+                          {o.carrier} {o.serviceLevel}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setLabelDialogOrderId(o.id)}
+                        >
+                          New label
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setLabelDialogOrderId(o.id)}
+                        disabled={!o.shippingAddress}
+                      >
+                        <Truck className="size-4 mr-1.5" />
+                        Generate label
+                      </Button>
+                    )}
+                  </div>
                 </Card>
               );
             })}
           </div>
         )}
       </div>
+      {labelDialogOrderId !== null && (
+        <ShippingLabelDialog
+          orderId={labelDialogOrderId}
+          open={labelDialogOrderId !== null}
+          onOpenChange={(v) => { if (!v) setLabelDialogOrderId(null); }}
+        />
+      )}
     </div>
   );
 }

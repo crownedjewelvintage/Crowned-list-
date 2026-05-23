@@ -267,6 +267,21 @@ ensureShopSettingsColumn("instagram_url", "TEXT NOT NULL DEFAULT ''");
 ensureShopSettingsColumn("whatnot_url", "TEXT NOT NULL DEFAULT ''");
 ensureShopSettingsColumn("tax_rate", "REAL NOT NULL DEFAULT 0");
 
+// ----- Migrations for web_orders: shipping label columns -----
+function ensureWebOrderColumn(name: string, def: string) {
+  const cols = sqlite
+    .prepare("PRAGMA table_info(web_orders)")
+    .all() as { name: string }[];
+  if (!cols.some((c) => c.name === name)) {
+    sqlite.exec(`ALTER TABLE web_orders ADD COLUMN ${name} ${def}`);
+  }
+}
+ensureWebOrderColumn("shippo_transaction_id", "TEXT NOT NULL DEFAULT ''");
+ensureWebOrderColumn("label_url", "TEXT NOT NULL DEFAULT ''");
+ensureWebOrderColumn("carrier", "TEXT NOT NULL DEFAULT ''");
+ensureWebOrderColumn("service_level", "TEXT NOT NULL DEFAULT ''");
+ensureWebOrderColumn("label_cost", "REAL NOT NULL DEFAULT 0");
+
 // One-time backfill: auto-publish all existing Active items with quantity > 0 to the shop.
 // Tracked via a settings row so it only runs once.
 try {

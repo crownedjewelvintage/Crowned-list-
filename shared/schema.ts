@@ -248,6 +248,12 @@ export const webOrders = sqliteTable("web_orders", {
   trackingNumber: text("tracking_number").notNull().default(""),
   shippingAddress: text("shipping_address").notNull().default(""),
   notes: text("notes").notNull().default(""),
+  // Shippo shipping label fields
+  shippoTransactionId: text("shippo_transaction_id").notNull().default(""),
+  labelUrl: text("label_url").notNull().default(""),
+  carrier: text("carrier").notNull().default(""),
+  serviceLevel: text("service_level").notNull().default(""),
+  labelCost: real("label_cost").notNull().default(0),
   createdAt: integer("created_at").notNull().default(0),
 });
 export const insertWebOrderSchema = createInsertSchema(webOrders).omit({

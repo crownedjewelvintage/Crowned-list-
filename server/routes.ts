@@ -1737,6 +1737,96 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(updated);
   });
 
+  // ----- Shipping label (Shippo) -----
+  // Fetch rates for an order. Operator supplies parcel dims + weight in body.
+  app.post("/api/shop/admin/orders/:id/shipping/rates", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      const order = await storage.getWebOrder(id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const { lengthIn, widthIn, heightIn, weightOz } = req.body || {};
+      const L = Number(lengthIn), W = Number(widthIn), H = Number(heightIn), Wt = Number(weightOz);
+      if (!(L > 0 && W > 0 && H > 0 && Wt > 0)) {
+        return res.status(400).json({ message: "lengthIn, widthIn, heightIn, weightOz must all be > 0" });
+      }
+
+      const customer = await storage.getCustomer(order.customerId);
+      const { parseStoredShippingAddress, createShipment } = await import("./shippo");
+      const to = parseStoredShippingAddress(
+        order.shippingAddress,
+        customer?.name || "",
+        customer?.email || "",
+      );
+      if (!to) {
+        return res.status(400).json({
+          message: "Order has no parseable shipping address",
+        });
+      }
+
+      const shipment = await createShipment(to, {
+        length: String(L),
+        width: String(W),
+        height: String(H),
+        distance_unit: "in",
+        weight: String(Wt),
+        mass_unit: "oz",
+      });
+      const rates = (shipment.rates || []).map((r) => ({
+        rateId: r.object_id,
+        carrier: r.provider,
+        service: r.servicelevel?.name || r.servicelevel?.token || "",
+        amount: Number(r.amount),
+        currency: r.currency,
+        estimatedDays: r.estimated_days,
+        attributes: r.attributes || [],
+      }));
+      rates.sort((a, b) => a.amount - b.amount);
+      res.json({ shipmentId: shipment.object_id, rates, messages: shipment.messages || [] });
+    } catch (err: any) {
+      console.error("[shipping rates]", err);
+      res.status(500).json({ message: err.message || "Failed to fetch rates" });
+    }
+  });
+
+  // Buy a rate, store the label URL + tracking number on the order.
+  app.post("/api/shop/admin/orders/:id/shipping/label", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      const { rateId, carrier, serviceLevel } = req.body || {};
+      if (!rateId) return res.status(400).json({ message: "rateId required" });
+
+      const order = await storage.getWebOrder(id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const { buyRate } = await import("./shippo");
+      const txn = await buyRate(String(rateId));
+      if (txn.status !== "SUCCESS") {
+        const msg = (txn.messages || []).map((m) => m.text).join("; ") || `Shippo status ${txn.status}`;
+        return res.status(502).json({ message: `Label purchase failed: ${msg}` });
+      }
+
+      const updated = await storage.updateWebOrder(id, {
+        shippoTransactionId: txn.object_id,
+        labelUrl: txn.label_url,
+        trackingNumber: txn.tracking_number,
+        carrier: carrier || "",
+        serviceLevel: serviceLevel || "",
+        fulfillmentStatus: order.fulfillmentStatus === "shipped" ? order.fulfillmentStatus : "shipped",
+      });
+      res.json({
+        ok: true,
+        labelUrl: txn.label_url,
+        trackingNumber: txn.tracking_number,
+        trackingUrl: txn.tracking_url_provider,
+        order: updated,
+      });
+    } catch (err: any) {
+      console.error("[shipping label]", err);
+      res.status(500).json({ message: err.message || "Failed to buy label" });
+    }
+  });
+
   app.get("/api/shop/admin/customers", authMiddleware, async (_req: Request, res: Response) => {
     const customers = await storage.listCustomers();
     const orders = await storage.listWebOrders();
