@@ -838,7 +838,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(items)
-      .where(and(inArray(items.id, ids), eq(items.webVisible, 1)))
+      .where(and(inArray(items.id, ids), eq(items.webVisible, 1), eq(items.status, "Active")))
       .all();
   }
 }

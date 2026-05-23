@@ -863,8 +863,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         orderNumber: makeOrderNumber(),
         bundleNumber,
       });
-      // Auto-mark item Sold
-      await storage.updateItem(item.id, req.userId!, { status: "Sold" });
+      // Auto-update inventory: decrement quantity, mark sold + hide from shop when stock hits 0
+      const orderQty = Math.max(1, data.quantity || 1);
+      const newQty = Math.max(0, (item.quantity || 0) - orderQty);
+      const patch: any = { quantity: newQty };
+      if (newQty === 0) {
+        patch.status = "Sold";
+        patch.webVisible = 0;
+      }
+      await storage.updateItem(item.id, req.userId!, patch);
       res.json({ ...created, bundleNote });
     } catch (err: any) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0]?.message || "Invalid input" });
