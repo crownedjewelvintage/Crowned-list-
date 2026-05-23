@@ -87,6 +87,7 @@ export type LabelFormatId =
   | "dymo30256"
   | "dymoJewelry"
   | "dymo4xl_1x2"
+  | "dymo4xl_1x2_portrait"
   | "dymo30387"
   | "dymo30857"
   | "dymo1744907";
@@ -101,6 +102,10 @@ export type LabelFormat = {
   // Layout type: "sheet" lays out a grid on Letter paper; "single" prints
   // one label per page sized exactly to the label (for Dymo continuous feed).
   layout: "sheet" | "single";
+  // Rotate the printed content 90 degrees inside the page. Some Dymo drivers
+  // feed labels in a fixed orientation (portrait), so we have to rotate the
+  // content rather than swapping page dimensions.
+  rotateContent?: 0 | 90 | 180 | 270;
   // For sheet layouts:
   sheetCols?: number;
   sheetRows?: number;
@@ -167,11 +172,20 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
   },
   dymo4xl_1x2: {
     id: "dymo4xl_1x2",
-    name: "Dymo 4XL Small (1\" \u00d7 2\")",
-    description: "LabelWriter 4XL on the small 1\" \u00d7 2\" label \u2014 barcode + SKU + short title auto-fit.",
+    name: "Dymo 4XL Small (1\" \u00d7 2\") \u2014 landscape feed",
+    description: "LabelWriter 4XL on 1\" \u00d7 2\" labels. Picks this if your printer feeds the 2\" edge first.",
     widthIn: 2,
     heightIn: 1,
     layout: "single",
+  },
+  dymo4xl_1x2_portrait: {
+    id: "dymo4xl_1x2_portrait",
+    name: "Dymo 4XL Small (1\" \u00d7 2\") \u2014 portrait feed",
+    description: "Same 1\" \u00d7 2\" label, rotated 90\u00b0. Try this if landscape printed sideways.",
+    widthIn: 1,
+    heightIn: 2,
+    layout: "single",
+    rotateContent: 90,
   },
   // ----- LabelWriter 4XL labels (the wide-format Dymo) -----
   dymo30387: {
@@ -286,19 +300,27 @@ function buildSingleHtml(
   items: Pick<Item, "sku" | "title" | "webPrice">[],
   fmt: LabelFormat,
 ): string {
+  const rotated = fmt.rotateContent === 90 || fmt.rotateContent === 270;
+  // Page dimensions are the physical paper size loaded into the printer.
+  const pageW = fmt.widthIn;
+  const pageH = fmt.heightIn;
+  // Content dimensions are how the label content is laid out BEFORE rotation
+  // (so for a rotated portrait page, content thinks it's landscape).
+  const contentW = rotated ? pageH : pageW;
+  const contentH = rotated ? pageW : pageH;
+
   // Padding reserved around the label (matches CSS below).
   const padX = 0.08;
   const padY = 0.05;
-  // Usable interior width/height in inches.
-  const innerW = Math.max(0.4, fmt.widthIn - padX * 2);
-  const innerH = Math.max(0.3, fmt.heightIn - padY * 2);
+  // Usable interior width/height in inches (in the pre-rotation frame).
+  const innerW = Math.max(0.4, contentW - padX * 2);
+  const innerH = Math.max(0.3, contentH - padY * 2);
 
   // Decide whether this label is too short to fit a title row.
   const tiny = innerH < 0.7; // jewelry-style and similar
-  const small = !tiny && (fmt.widthIn < 2.3 || fmt.heightIn < 1.1);
+  const small = !tiny && (contentW < 2.3 || contentH < 1.1);
 
   // Allocate vertical space: title (if shown) + barcode + sku row.
-  // Reserve ~14pt (0.20in) for sku, ~14pt (0.20in) for title.
   const skuRowIn = 0.18;
   const titleRowIn = tiny ? 0 : small ? 0.16 : 0.22;
   const barcodeHeightIn = Math.max(0.18, innerH - skuRowIn - titleRowIn - 0.04);
@@ -319,6 +341,21 @@ function buildSingleHtml(
     )
     .join("");
 
+  // Rotation: position the content frame absolutely inside the page, give it
+  // the pre-rotation dimensions, then rotate around its center. CSS transform
+  // doesn't change the layout box, but for print the rotated pixels land on
+  // the actual paper at the correct orientation.
+  const labelTransform = rotated
+    ? `
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%) rotate(${fmt.rotateContent}deg);
+        transform-origin: center center;
+      `
+    : "";
+  const labelSizing = rotated
+    ? `width: ${contentW}in; height: ${contentH}in;`
+    : `width: 100%; height: 100%;`;
+
   return baseDoc(
     `<div class="toolbar">
       <button onclick="window.print()">Print</button>
@@ -328,13 +365,15 @@ function buildSingleHtml(
     ${labelHtml}`,
     `
     .page {
-      width: ${fmt.widthIn}in; height: ${fmt.heightIn}in;
+      width: ${pageW}in; height: ${pageH}in;
       background: #fff; margin: 8px auto;
       page-break-after: always;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      position: relative; overflow: hidden;
     }
     .label {
-      width: 100%; height: 100%;
+      ${labelSizing}
+      ${labelTransform}
       padding: ${padY}in ${padX}in; overflow: hidden;
       display: flex; flex-direction: column; justify-content: center;
       align-items: center; text-align: center;
@@ -344,7 +383,7 @@ function buildSingleHtml(
       .toolbar { display: none; }
       .page { margin: 0; box-shadow: none; }
       .label { border: 0; }
-      @page { size: ${fmt.widthIn}in ${fmt.heightIn}in; margin: 0; }
+      @page { size: ${pageW}in ${pageH}in; margin: 0; }
     }
     `,
   );
