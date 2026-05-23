@@ -85,7 +85,11 @@ export type LabelFormatId =
   | "dymo30334"
   | "dymo30336"
   | "dymo30256"
-  | "dymoJewelry";
+  | "dymoJewelry"
+  | "dymo4xl_1x2"
+  | "dymo30387"
+  | "dymo30857"
+  | "dymo1744907";
 
 export type LabelFormat = {
   id: LabelFormatId;
@@ -159,6 +163,39 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     description: "Small 2-up Dymo label with perforation (a jewelry tag). Prints barcode + SKU sized to fit.",
     widthIn: 2,
     heightIn: 0.5,
+    layout: "single",
+  },
+  dymo4xl_1x2: {
+    id: "dymo4xl_1x2",
+    name: "Dymo 4XL Small (1\" \u00d7 2\")",
+    description: "LabelWriter 4XL on the small 1\" \u00d7 2\" label \u2014 barcode + SKU + short title auto-fit.",
+    widthIn: 2,
+    heightIn: 1,
+    layout: "single",
+  },
+  // ----- LabelWriter 4XL labels (the wide-format Dymo) -----
+  dymo30387: {
+    id: "dymo30387",
+    name: "Dymo 30387 4XL Jewelry (1.875\" \u00d7 2.875\")",
+    description: "4XL jewelry / multipurpose label.",
+    widthIn: 2.875,
+    heightIn: 1.875,
+    layout: "single",
+  },
+  dymo30857: {
+    id: "dymo30857",
+    name: "Dymo 30857 4XL Name Badge (2.25\" \u00d7 4\")",
+    description: "4XL multipurpose / name badge label.",
+    widthIn: 4,
+    heightIn: 2.25,
+    layout: "single",
+  },
+  dymo1744907: {
+    id: "dymo1744907",
+    name: "Dymo 1744907 4XL Shipping (4\" \u00d7 6\")",
+    description: "4XL full shipping label \u2014 perfect for box / packing slips.",
+    widthIn: 4,
+    heightIn: 6,
     layout: "single",
   },
 };
