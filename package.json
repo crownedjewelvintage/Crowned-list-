@@ -11,9 +11,11 @@
     "build": "tsx script/build.ts",
     "start": "node script/seed-disk.cjs && NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "backup": "node scripts/backup-to-r2.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1053.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@radix-ui/react-accordion": "^1.2.4",

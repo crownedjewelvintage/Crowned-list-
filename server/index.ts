@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { Response, NextFunction } from 'express';
 import type { Request } from 'express';
 import { registerRoutes } from "./routes";
+import { startBackupScheduler } from "./backup-scheduler";
 import { serveStatic } from "./static";
 import { createServer } from "node:http";
 
@@ -112,6 +113,7 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      startBackupScheduler();
     },
   );
 })();

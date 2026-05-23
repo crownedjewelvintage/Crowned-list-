@@ -453,6 +453,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ id: user.id, username: user.username });
   });
 
+  // ----- Backup admin -----
+  app.post("/api/admin/backup/run", authMiddleware, async (_req: Request, res: Response) => {
+    const { runBackupNow } = await import("./backup-scheduler");
+    const result = await runBackupNow();
+    res.status(result.ok ? 200 : 500).json(result);
+  });
+
   // ----- Photo upload (returns public URLs) -----
   app.post(
     "/api/upload",
