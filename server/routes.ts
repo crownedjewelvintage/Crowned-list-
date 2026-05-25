@@ -1711,6 +1711,69 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ----- Operator shop admin -----
+  // ----- Events (public + admin) -----
+  app.get("/api/shop/events", async (_req: Request, res: Response) => {
+    // Only published events. Filter to upcoming (or in progress).
+    const nowIso = new Date().toISOString();
+    const events = await storage.listPublishedEvents();
+    const upcoming = events.filter((e) => {
+      if (!e.startAt) return true;
+      // Treat events with no endAt as still relevant up to 6 hours past start
+      const ref = e.endAt || new Date(new Date(e.startAt).getTime() + 6 * 60 * 60 * 1000).toISOString();
+      return ref >= nowIso;
+    });
+    res.json(upcoming);
+  });
+
+  app.get("/api/shop/admin/events", authMiddleware, async (_req: Request, res: Response) => {
+    res.json(await storage.listEvents());
+  });
+
+  app.post("/api/shop/admin/events", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const eventInputSchema = z.object({
+        title: z.string().min(1, "Title required"),
+        description: z.string().optional().default(""),
+        startAt: z.string().optional().default(""),
+        endAt: z.string().optional().default(""),
+        timezone: z.string().optional().default("America/Chicago"),
+        kind: z.enum(["whatnot", "in_person", "sale", "other"]).optional().default("whatnot"),
+        location: z.string().optional().default(""),
+        url: z.string().optional().default(""),
+        imageUrl: z.string().optional().default(""),
+        published: z.coerce.number().int().min(0).max(1).optional().default(1),
+        recurrence: z.enum(["none", "weekly"]).optional().default("none"),
+      });
+      const data = eventInputSchema.parse(req.body);
+      const created = await storage.createEvent(data);
+      res.status(201).json(created);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0]?.message || "Invalid input" });
+      res.status(500).json({ message: err.message || "Create failed" });
+    }
+  });
+
+  app.patch("/api/shop/admin/events/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      const allowed = ["title", "description", "startAt", "endAt", "timezone", "kind", "location", "url", "imageUrl", "published", "recurrence"];
+      const patch: any = {};
+      for (const k of allowed) if (req.body[k] !== undefined) patch[k] = req.body[k];
+      if (patch.published !== undefined) patch.published = Number(patch.published) ? 1 : 0;
+      const updated = await storage.updateEvent(id, patch);
+      if (!updated) return res.status(404).json({ message: "Event not found" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Update failed" });
+    }
+  });
+
+  app.delete("/api/shop/admin/events/:id", authMiddleware, async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    await storage.deleteEvent(id);
+    res.json({ ok: true });
+  });
+
   app.get("/api/shop/admin/orders", authMiddleware, async (_req: Request, res: Response) => {
     const orders = await storage.listWebOrders();
     const customers = await storage.listCustomers();

@@ -263,6 +263,37 @@ export const insertWebOrderSchema = createInsertSchema(webOrders).omit({
 export type InsertWebOrder = z.infer<typeof insertWebOrderSchema>;
 export type WebOrder = typeof webOrders.$inferSelect;
 
+// ----- Events (live shows, in-person events, sales) -----
+export const webEvents = sqliteTable("web_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  // ISO8601 string with timezone for the event start, e.g. "2026-05-30T22:00:00-05:00"
+  startAt: text("start_at").notNull().default(""),
+  endAt: text("end_at").notNull().default(""),
+  timezone: text("timezone").notNull().default("America/Chicago"),
+  // "whatnot" | "in_person" | "sale" | "other"
+  kind: text("kind").notNull().default("whatnot"),
+  location: text("location").notNull().default(""),
+  // External link (Whatnot show URL, RSVP, etc.)
+  url: text("url").notNull().default(""),
+  // Optional cover image (relative /uploads URL)
+  imageUrl: text("image_url").notNull().default(""),
+  // 1 = shown on public shop, 0 = draft / hidden
+  published: integer("published").notNull().default(1),
+  // Recurrence: "none" | "weekly" (extensible later)
+  recurrence: text("recurrence").notNull().default("none"),
+  createdAt: integer("created_at").notNull().default(0),
+  updatedAt: integer("updated_at").notNull().default(0),
+});
+export const insertWebEventSchema = createInsertSchema(webEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWebEvent = z.infer<typeof insertWebEventSchema>;
+export type WebEvent = typeof webEvents.$inferSelect;
+
 // ----- Rewards transactions (audit log) -----
 export const rewardsTransactions = sqliteTable("rewards_transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),

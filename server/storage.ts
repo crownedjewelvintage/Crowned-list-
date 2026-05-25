@@ -9,6 +9,7 @@ import {
   expenses,
   customers,
   webOrders,
+  webEvents,
   rewardsTransactions,
   shopSettings,
 } from "@shared/schema";
@@ -32,6 +33,8 @@ import type {
   InsertCustomer,
   WebOrder,
   InsertWebOrder,
+  WebEvent,
+  InsertWebEvent,
   RewardsTransaction,
   InsertRewardsTransaction,
   ShopSettings,
@@ -215,6 +218,22 @@ sqlite.exec(`
     stripe_secret_key TEXT NOT NULL DEFAULT '',
     free_shipping_threshold REAL NOT NULL DEFAULT 100,
     flat_shipping_rate REAL NOT NULL DEFAULT 9,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS web_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    start_at TEXT NOT NULL DEFAULT '',
+    end_at TEXT NOT NULL DEFAULT '',
+    timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+    kind TEXT NOT NULL DEFAULT 'whatnot',
+    location TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    image_url TEXT NOT NULL DEFAULT '',
+    published INTEGER NOT NULL DEFAULT 1,
+    recurrence TEXT NOT NULL DEFAULT 'none',
+    created_at INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
   );
 `);
@@ -805,6 +824,41 @@ export class DatabaseStorage implements IStorage {
   }
   async updateWebOrder(id: number, patch: Partial<WebOrder>): Promise<WebOrder | undefined> {
     return db.update(webOrders).set(patch).where(eq(webOrders.id, id)).returning().get();
+  }
+
+  // ----- Events -----
+  async listEvents(): Promise<WebEvent[]> {
+    return db.select().from(webEvents).orderBy(desc(webEvents.startAt)).all();
+  }
+  async listPublishedEvents(): Promise<WebEvent[]> {
+    return db
+      .select()
+      .from(webEvents)
+      .where(eq(webEvents.published, 1))
+      .orderBy(asc(webEvents.startAt))
+      .all();
+  }
+  async getEvent(id: number): Promise<WebEvent | undefined> {
+    return db.select().from(webEvents).where(eq(webEvents.id, id)).get();
+  }
+  async createEvent(input: InsertWebEvent): Promise<WebEvent> {
+    const now = Date.now();
+    return db
+      .insert(webEvents)
+      .values({ ...input, createdAt: now, updatedAt: now })
+      .returning()
+      .get();
+  }
+  async updateEvent(id: number, patch: Partial<InsertWebEvent>): Promise<WebEvent | undefined> {
+    return db
+      .update(webEvents)
+      .set({ ...patch, updatedAt: Date.now() })
+      .where(eq(webEvents.id, id))
+      .returning()
+      .get();
+  }
+  async deleteEvent(id: number): Promise<void> {
+    db.delete(webEvents).where(eq(webEvents.id, id)).run();
   }
 
   // ----- Shop settings -----

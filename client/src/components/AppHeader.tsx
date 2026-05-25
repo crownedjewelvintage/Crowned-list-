@@ -6,30 +6,14 @@ import { LogOut, Sun, Moon, Package, Calendar, ListOrdered, BarChart3, ShoppingB
 
 export function CrownLogo({ size = 32 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src="/cjv-logo.jpg"
       width={size}
       height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      aria-label="Crown List"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect width="32" height="32" rx="7" fill="hsl(var(--brand-emerald-deep))" />
-      {/* Crown silhouette: V-cut between three peaks, with gold accents */}
-      <path
-        d="M7 12.5 L10.5 17 L13 11 L16 16 L19 11 L21.5 17 L25 12.5 L24 22 H8 Z"
-        fill="hsl(var(--brand-gold))"
-        stroke="hsl(var(--brand-gold-deep))"
-        strokeWidth="0.6"
-        strokeLinejoin="round"
-      />
-      {/* Crown band */}
-      <rect x="8" y="21" width="16" height="2.4" rx="0.6" fill="hsl(var(--brand-gold-deep))" />
-      {/* Gem dots on the three peaks */}
-      <circle cx="10.5" cy="17.4" r="0.9" fill="hsl(var(--brand-emerald))" />
-      <circle cx="16" cy="16.4" r="1" fill="hsl(var(--brand-emerald))" />
-      <circle cx="21.5" cy="17.4" r="0.9" fill="hsl(var(--brand-emerald))" />
-    </svg>
+      alt="Crowned Jewel Vintage"
+      className="rounded-full object-cover shrink-0"
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -45,6 +29,7 @@ export function AppHeader() {
   const isReports = location.startsWith("/reports");
   const isShopOrders = location.startsWith("/shop-orders");
   const isShopCustomers = location.startsWith("/shop-customers");
+  const isShopEvents = location.startsWith("/shop-events");
   const isShopSettings = location.startsWith("/shop-settings");
 
   return (
@@ -117,6 +102,17 @@ export function AppHeader() {
               >
                 <ShoppingBag className="size-4" />
                 <span className="hidden md:inline">Shop Orders</span>
+              </Button>
+            </Link>
+            <Link href="/shop-events">
+              <Button
+                data-testid="nav-shop-events"
+                variant={isShopEvents ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-1.5"
+              >
+                <Calendar className="size-4" />
+                <span className="hidden md:inline">Events</span>
               </Button>
             </Link>
             <Link href="/shop-customers">
